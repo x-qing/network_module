@@ -9,9 +9,12 @@ int main() {
 	WSADATA dat;
 	// 启动windows的socket网络环境
 	WSAStartup(ver, &dat);
-
 	/*
-
+	* socket简易tcp服务端
+	* socket -> bind -> listen -> accept -> read -> recv ->close
+	* 
+	* socket建议tcp服务端
+	* socket -> connect -> read -> recv -> close
 	*/
 
 
