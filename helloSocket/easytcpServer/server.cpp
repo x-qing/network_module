@@ -27,9 +27,9 @@ int main() {
 	sockaddr_in _sin = {};
 	_sin.sin_family = AF_INET;
 	_sin.sin_port = htons(4567);  // 主机到网络字节序的转换
-	//_sin.sin_addr.S_un.S_addr = inet_addr("127.0.0.1");
-	_sin.sin_addr.S_un.S_addr = INADDR_ANY;
-	if (bind(_sock, (sockaddr*)&_sin, sizeof(_sin)) == SOCKET_ERROR) {
+	_sin.sin_addr.S_un.S_addr = inet_addr("127.0.0.1");
+	//_sin.sin_addr.S_un.S_addr = INADDR_ANY;  // 表示支持本机上的所有ip
+	if (bind(_sock, (sockaddr*)&_sin, sizeof(sockaddr_in)) == SOCKET_ERROR) {
 		// 绑定错误
 		printf("bind error!\n");
 		return 0;
@@ -42,6 +42,9 @@ int main() {
 		printf("listen error!\n");
 		return 0;
 	}
+	else {
+		printf("listen sucess!\n");
+	}
 
 	sockaddr_in clientAddr = {};
 	int naddrLen = sizeof(clientAddr);
@@ -51,8 +54,11 @@ int main() {
 	while (true) {
 		_cSock = accept(_sock, (sockaddr*)&clientAddr, &naddrLen);
 
-		if (_cSock == INVALID_SOCKET) {
+		if (_cSock == SOCKET_ERROR) {
 			printf("accept error!\n");
+		}
+		else {
+			printf("accept sucess!\n");
 		}
 		printf("new client add:ip = %s,port = %d\n",inet_ntoa(clientAddr.sin_addr),(int)clientAddr.sin_port);
 		//char msgBuf[] = "hello client,i am server!\n";
