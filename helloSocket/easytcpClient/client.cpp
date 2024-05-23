@@ -1,5 +1,7 @@
 #define WIN32_LEAN_AND_MEAN   // 宏定义避免一些依赖库的引用冲突
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
+//#pragma warning(disable:4996）
+
 #include <Windows.h>
 #include <WinSock2.h>
 #include <stdio.h>
@@ -32,7 +34,6 @@ int main() {
 	// 服务器的ip和端口
 	_sin.sin_port = htons(4567);
 	_sin.sin_addr.S_un.S_addr = inet_addr("127.0.0.1");
-
 	int _csock = connect(_sock, (sockaddr*)&_sin, sizeof(sockaddr_in));
 	if (_csock == SOCKET_ERROR) {
 		printf("connect error!\n");
@@ -40,17 +41,38 @@ int main() {
 	else {
 		printf("connect sucess!\n");
 	}
-	char recvbuf[1024] = {0};
+	
+	// 都是128，长度匹配
+	
+	while (true) {
+		char cmdbuf[128] = { 0 };
+		scanf("%s", cmdbuf);
 
-	int len = recv(_sock, recvbuf, 1024, 0);
-	if (len > 0) {
-		printf("recv data is :%d-%s\n",len, recvbuf);
+		// 处理请求
+		if (0 == strcmp(cmdbuf, "exit")) {
+			//printf("client quit")
+			printf("client quit! task over!\n");
+			break;
+		}
+		else {
+			// 发送命令
+			send(_sock, cmdbuf, strlen(cmdbuf)+1, 0);
+		}
+
+		char recvbuf[128] = { 0 };
+
+		int len = recv(_sock, recvbuf, 1024, 0);
+		if (len > 0) {
+			printf("recv data is :%d-%s\n", len, recvbuf);
+		}
 	}
 	
 
 	closesocket(_sock);
 
 	WSACleanup();
+	printf("quit over!!!\n");
+	//getchar();
 	getchar();
 	return 0;
 }

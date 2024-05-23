@@ -50,19 +50,47 @@ int main() {
 	int naddrLen = sizeof(clientAddr);
 
 	SOCKET _cSock = INVALID_SOCKET;   // 初始化为一个无效的socket
-	char msgBuf[] = "hello client,i am server!\n";
-	while (true) {
-		_cSock = accept(_sock, (sockaddr*)&clientAddr, &naddrLen);
+	//char msgBuf[] = "hello client,i am server!\n";
+	_cSock = accept(_sock, (sockaddr*)&clientAddr, &naddrLen);
 
-		if (_cSock == SOCKET_ERROR) {
-			printf("accept error!\n");
+	if (_cSock == SOCKET_ERROR) {
+		printf("accept error!\n");
+	}
+	else {
+		printf("accept sucess!\n");
+	}
+	printf("new client add:ip = %s,port = %d\n", inet_ntoa(clientAddr.sin_addr), (int)clientAddr.sin_port);
+
+	// 接收缓冲区
+	/*char recvBuf[128] = { 0 };*/
+	char recvBuf[128] = { 0 };
+
+	// 修改了服务端，可以和客户端进行交互
+	while (true) {
+		// 接收客户端的请求数据
+		int len = recv(_cSock, recvBuf, 128, 0);
+		if (len <= 0) {
+			printf("server quit! task over!\n");
+			break;
+		}
+		printf("recv data from client:%s\n",recvBuf);
+		// 处理请求
+		if (0 == strcmp(recvBuf, "getName")) {
+			char msgBuf[128] = "xiao ming";
+			send(_cSock, msgBuf, strlen(msgBuf) + 1, 0);   // 把结尾符号0也发送过去
+		}
+		else if (0 == strcmp(recvBuf, "getAge")) {
+			char msgBuf[128] = "18.";
+			send(_cSock, msgBuf, strlen(msgBuf) + 1, 0);   // 把结尾符号0也发送过去
 		}
 		else {
-			printf("accept sucess!\n");
+			char msgBuf[128] = "???.";
+			send(_cSock, msgBuf, strlen(msgBuf) + 1, 0);
 		}
-		printf("new client add:ip = %s,port = %d\n",inet_ntoa(clientAddr.sin_addr),(int)clientAddr.sin_port);
+		
+		
 		//char msgBuf[] = "hello client,i am server!\n";
-		send(_cSock, msgBuf, strlen(msgBuf)+1,0);   // 把结尾符号0也发送过去
+		//send(_cSock, msgBuf, strlen(msgBuf)+1,0);   // 把结尾符号0也发送过去
 	}
 
 
@@ -70,5 +98,8 @@ int main() {
 
 
 	WSACleanup();
+
+	printf("quit over!!!\n");
+	getchar();
 	return 0;
 }
