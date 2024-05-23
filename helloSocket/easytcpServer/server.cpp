@@ -8,9 +8,33 @@
 // window下的socket环境
 
 // 使用结构体,来进行消息的传递
-struct DataPackage {
-	int age;
-	char name[32];
+
+enum CMD{CMD_LOGIN,CMD_LOGINOUT,CMD_ERROR};
+
+struct DataHeader {
+	short dataLength; // 数据长度
+	short cmd; // 命令
+};
+
+// 登录以及其返回的结果
+struct Login {
+	//int age;
+	//char name[32];
+	char userName[32];
+	char passWord[32];
+};
+
+struct LoginResult {
+	int result;   // 登录的结果
+};
+
+// 登出以及其返回的结果
+struct Loginout {
+	char userName[32];
+};
+
+struct LoginoutResult {
+	int result;   // 登录的结果
 };
 
 int main() {
@@ -70,31 +94,72 @@ int main() {
 
 	// 接收缓冲区
 	/*char recvBuf[128] = { 0 };*/
-	char recvBuf[128] = { 0 };
+	//char recvBuf[128] = { 0 };
+
 
 	// 修改了服务端，可以和客户端进行交互
 	while (true) {
+		DataHeader header = {};
+
 		// 接收客户端的请求数据
-		int len = recv(_cSock, recvBuf, 128, 0);
+		int len = recv(_cSock, (char *)&header, sizeof(DataHeader), 0);
 		if (len <= 0) {
 			printf("server quit! task over!\n");
 			break;
 		}
-		printf("recv data from client:%s\n",recvBuf);
-		// 处理请求
-		if (0 == strcmp(recvBuf, "getInfo")) {
-			//char msgBuf[128] = "xiao ming";
-			DataPackage dp = { 80,"xiaohong" };
-			send(_cSock, (const char*)&dp, sizeof(DataPackage) + 1, 0);   // 把结尾符号0也发送过去
+		printf("recv data:cmd = %d, length = %d\n",header.cmd,header.dataLength);
+		switch (header.cmd) {
+		case CMD_LOGIN:
+			{
+				Login login = {};
+				recv(_cSock, (char*)&login, sizeof(Login), 0);
+				// 忽略判断用户名和密码
+				// 定义消息头和返回值
+				//DataHeader hd = {CMD_LOGIN,};
+				LoginResult res = { 1 };
+
+				send(_cSock, (const char*)&header, sizeof(DataHeader), 0);
+				send(_cSock, (const char*)&res, sizeof(LoginResult), 0);
+			}
+			break;
+
+		case CMD_LOGINOUT:
+			{
+				Loginout loginout = {};
+				recv(_cSock, (char*)&loginout, sizeof(Loginout), 0);
+				// 忽略判断用户名和密码
+				// 定义消息头和返回值
+				//DataHeader hd = {CMD_LOGIN,};
+				LoginoutResult res = { 1 };
+
+				send(_cSock, (const char*)&header, sizeof(DataHeader), 0);
+				send(_cSock, (const char*)&res, sizeof(LoginoutResult), 0);
+			}
+			break;
+		default:
+			{
+				header.cmd = CMD_ERROR;
+				header.dataLength = 0;
+				send(_cSock, (const char*)&header, sizeof(DataHeader), 0);
+			}
+			break;
+			//char msgBuf[128] = "???.";
+			//send(_cSock, msgBuf, strlen(msgBuf) + 1, 0);
 		}
+		// 处理请求
+		//if (0 == strcmp(recvBuf, "getInfo")) {
+		//	//char msgBuf[128] = "xiao ming";
+		//	DataPackage dp = { 80,"xiaohong" };
+		//	send(_cSock, (const char*)&dp, sizeof(DataPackage) + 1, 0);   // 把结尾符号0也发送过去
+		//}
 		//else if (0 == strcmp(recvBuf, "getAge")) {
 		//	char msgBuf[128] = "18.";
 		//	send(_cSock, msgBuf, strlen(msgBuf) + 1, 0);   // 把结尾符号0也发送过去
 		//}
-		else {
-			char msgBuf[128] = "???.";
-			send(_cSock, msgBuf, strlen(msgBuf) + 1, 0);
-		}
+		//else {
+		//	char msgBuf[128] = "???.";
+		//	send(_cSock, msgBuf, strlen(msgBuf) + 1, 0);
+		//}
 		
 		
 		//char msgBuf[] = "hello client,i am server!\n";

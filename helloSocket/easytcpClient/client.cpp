@@ -8,10 +8,39 @@
 //#pragma comment(lib,"ws2_32.lib")
 
 
-struct DataPackage {
-	int age;
-	char name[32];
+//struct DataPackage {
+//	int age;
+//	char name[32];
+//};
+
+enum CMD { CMD_LOGIN, CMD_LOGINOUT, CMD_ERROR };
+
+struct DataHeader {
+	short dataLength; // 数据长度
+	short cmd; // 命令
 };
+
+// 登录以及其返回的结果
+struct Login {
+	//int age;
+	//char name[32];
+	char userName[32];
+	char passWord[32];
+};
+
+struct LoginResult {
+	int result;   // 登录的结果
+};
+
+// 登出以及其返回的结果
+struct Loginout {
+	char userName[32];
+};
+
+struct LoginoutResult {
+	int result;   // 登录的结果
+};
+
 
 // window下的socket环境
 int main() {
@@ -60,21 +89,48 @@ int main() {
 			printf("client quit! task over!\n");
 			break;
 		}
+		else if(0 == strcmp(cmdbuf,"login")) {
+			// 登录命令
+			Login login = { "username","password" };
+			DataHeader header = { sizeof(Login) ,CMD_LOGIN};
+			send(_sock, (const char *)&header, sizeof(DataHeader), 0);
+			send(_sock, (const char*)&login, sizeof(Login), 0);
+
+			// 接收服务器的消息
+			DataHeader retheader = {};
+			LoginResult retlogin = {};
+			recv(_sock, (char*)&retheader, sizeof(DataHeader), 0);
+			recv(_sock, (char*)&retlogin, sizeof(LoginResult), 0);
+			printf("Loginresult = %d\n", retlogin.result);
+		}
+		else if (0 == strcmp(cmdbuf, "logout")) {
+			// 退出命令
+			Loginout loginout = { "username" };
+			DataHeader header = { sizeof(Loginout),CMD_LOGINOUT };
+			send(_sock, (const char*)&header, sizeof(DataHeader), 0);
+			send(_sock, (const char*)&loginout, sizeof(Loginout), 0);
+
+			// 接收服务器的消息
+			DataHeader retheader = {};
+			LoginoutResult retloginout = {};
+			recv(_sock, (char*)&retheader, sizeof(DataHeader), 0);
+			recv(_sock, (char*)&retloginout, sizeof(LoginoutResult), 0);
+			printf("Loginresult = %d\n", retloginout.result);
+		}
 		else {
-			// 发送命令
-			send(_sock, cmdbuf, strlen(cmdbuf)+1, 0);
+			printf("不支持此类命令，请重新输入\n");
 		}
 
-		char recvbuf[128] = { 0 };
+		//char recvbuf[128] = { 0 };
 
-		int len = recv(_sock, recvbuf, 1024, 0);
+		//int len = recv(_sock, recvbuf, 1024, 0);
 
-		if (len > 0) {
-			// 对接收到的数据进行处理
-			DataPackage* dp = (DataPackage*)recvbuf;
+		//if (len > 0) {
+		//	// 对接收到的数据进行处理
+		//	DataPackage* dp = (DataPackage*)recvbuf;
 
-			printf("recv data is: age=%d,name=%s\n", dp->age, dp->name);
-		}
+		//	printf("recv data is: age=%d,name=%s\n", dp->age, dp->name);
+		//}
 	}
 	
 
