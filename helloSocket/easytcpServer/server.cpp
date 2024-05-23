@@ -6,6 +6,13 @@
 #include <stdio.h>
 //#define _WINSOCK_DEPRECATED_NO_WARNINGS
 // window下的socket环境
+
+// 使用结构体,来进行消息的传递
+struct DataPackage {
+	int age;
+	char name[32];
+};
+
 int main() {
 	WORD ver = MAKEWORD(2, 2);
 	WSADATA dat;
@@ -75,14 +82,15 @@ int main() {
 		}
 		printf("recv data from client:%s\n",recvBuf);
 		// 处理请求
-		if (0 == strcmp(recvBuf, "getName")) {
-			char msgBuf[128] = "xiao ming";
-			send(_cSock, msgBuf, strlen(msgBuf) + 1, 0);   // 把结尾符号0也发送过去
+		if (0 == strcmp(recvBuf, "getInfo")) {
+			//char msgBuf[128] = "xiao ming";
+			DataPackage dp = { 80,"xiaohong" };
+			send(_cSock, (const char*)&dp, sizeof(DataPackage) + 1, 0);   // 把结尾符号0也发送过去
 		}
-		else if (0 == strcmp(recvBuf, "getAge")) {
-			char msgBuf[128] = "18.";
-			send(_cSock, msgBuf, strlen(msgBuf) + 1, 0);   // 把结尾符号0也发送过去
-		}
+		//else if (0 == strcmp(recvBuf, "getAge")) {
+		//	char msgBuf[128] = "18.";
+		//	send(_cSock, msgBuf, strlen(msgBuf) + 1, 0);   // 把结尾符号0也发送过去
+		//}
 		else {
 			char msgBuf[128] = "???.";
 			send(_cSock, msgBuf, strlen(msgBuf) + 1, 0);

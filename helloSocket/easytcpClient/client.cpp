@@ -7,6 +7,12 @@
 #include <stdio.h>
 //#pragma comment(lib,"ws2_32.lib")
 
+
+struct DataPackage {
+	int age;
+	char name[32];
+};
+
 // window下的socket环境
 int main() {
 	WORD ver = MAKEWORD(2, 2);
@@ -62,8 +68,12 @@ int main() {
 		char recvbuf[128] = { 0 };
 
 		int len = recv(_sock, recvbuf, 1024, 0);
+
 		if (len > 0) {
-			printf("recv data is :%d-%s\n", len, recvbuf);
+			// 对接收到的数据进行处理
+			DataPackage* dp = (DataPackage*)recvbuf;
+
+			printf("recv data is: age=%d,name=%s\n", dp->age, dp->name);
 		}
 	}
 	
