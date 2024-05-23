@@ -9,7 +9,13 @@
 
 // 使用结构体,来进行消息的传递
 
-enum CMD{CMD_LOGIN,CMD_LOGINOUT,CMD_ERROR};
+enum CMD{
+	CMD_LOGIN,
+	CMD_LOGIN_RESULT,
+	CMD_LOGINOUT,
+	CMD_LOGINOUT_RESULT,
+	CMD_ERROR
+};
 
 struct DataHeader {
 	short dataLength; // 数据长度
@@ -17,23 +23,43 @@ struct DataHeader {
 };
 
 // 登录以及其返回的结果
-struct Login {
+// 如果使用结构体来进行，不利于扩展，这里直接使用继承的方式
+struct Login : public DataHeader {
 	//int age;
 	//char name[32];
+	Login() {
+		dataLength = sizeof(Login);
+		cmd = CMD_LOGIN;
+	}
+	//DataHeader header;
 	char userName[32];
 	char passWord[32];
 };
 
-struct LoginResult {
+struct LoginResult : public DataHeader {
+	LoginResult() {
+		dataLength = sizeof(LoginResult);
+		cmd = CMD_LOGIN_RESULT;
+		result = 0;   // 为0表示一切正常
+	}
 	int result;   // 登录的结果
 };
 
 // 登出以及其返回的结果
-struct Loginout {
+struct Loginout : public DataHeader {
+	Loginout() {
+		dataLength = sizeof(Loginout);
+		cmd = CMD_LOGINOUT;
+	}
 	char userName[32];
 };
 
-struct LoginoutResult {
+struct LoginoutResult : public DataHeader {
+	LoginoutResult() {
+		dataLength = sizeof(LoginoutResult);
+		cmd = CMD_LOGINOUT_RESULT;
+		result = 0;
+	}
 	int result;   // 登录的结果
 };
 
@@ -90,7 +116,8 @@ int main() {
 	else {
 		printf("accept sucess!\n");
 	}
-	printf("new client add:ip = %s,port = %d\n", inet_ntoa(clientAddr.sin_addr), (int)clientAddr.sin_port);
+	printf("new client add:ip = %s,port = %d\n", inet_ntoa(clientAddr.sin_addr),
+														(int)clientAddr.sin_port);
 
 	// 接收缓冲区
 	/*char recvBuf[128] = { 0 };*/
@@ -102,23 +129,26 @@ int main() {
 		DataHeader header = {};
 
 		// 接收客户端的请求数据
+		// 首先接收的是hander的长度，后续已经没有这么长了
 		int len = recv(_cSock, (char *)&header, sizeof(DataHeader), 0);
 		if (len <= 0) {
 			printf("server quit! task over!\n");
 			break;
 		}
-		printf("recv data:cmd = %d, length = %d\n",header.cmd,header.dataLength);
+		//printf("recv data:cmd = %d, length = %d\n",header.cmd,header.dataLength);
 		switch (header.cmd) {
 		case CMD_LOGIN:
 			{
+				// 接收登录数据
 				Login login = {};
-				recv(_cSock, (char*)&login, sizeof(Login), 0);
+				recv(_cSock, (char*)&login + sizeof(DataHeader), sizeof(Login) - sizeof(DataHeader), 0);
+				printf("收到命令:CMD_LOGIN,数据长度 = %d,username=%s,password=%s\n", login.dataLength,login.userName,login.passWord);
 				// 忽略判断用户名和密码
 				// 定义消息头和返回值
 				//DataHeader hd = {CMD_LOGIN,};
-				LoginResult res = { 1 };
+				LoginResult res;
 
-				send(_cSock, (const char*)&header, sizeof(DataHeader), 0);
+				//send(_cSock, (const char*)&header, sizeof(DataHeader), 0);
 				send(_cSock, (const char*)&res, sizeof(LoginResult), 0);
 			}
 			break;
@@ -126,13 +156,14 @@ int main() {
 		case CMD_LOGINOUT:
 			{
 				Loginout loginout = {};
-				recv(_cSock, (char*)&loginout, sizeof(Loginout), 0);
+				recv(_cSock, (char*)&loginout+sizeof(DataHeader), sizeof(Loginout)-sizeof(DataHeader), 0);
+				printf("收到命令:CMD_LOGIN,数据长度 = %d,username=%s\n", loginout.dataLength, loginout.userName);
 				// 忽略判断用户名和密码
 				// 定义消息头和返回值
 				//DataHeader hd = {CMD_LOGIN,};
-				LoginoutResult res = { 1 };
+				LoginoutResult res;
 
-				send(_cSock, (const char*)&header, sizeof(DataHeader), 0);
+				//send(_cSock, (const char*)&header, sizeof(DataHeader), 0);
 				send(_cSock, (const char*)&res, sizeof(LoginoutResult), 0);
 			}
 			break;

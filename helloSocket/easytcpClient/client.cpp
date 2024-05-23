@@ -13,7 +13,13 @@
 //	char name[32];
 //};
 
-enum CMD { CMD_LOGIN, CMD_LOGINOUT, CMD_ERROR };
+enum CMD {
+	CMD_LOGIN,
+	CMD_LOGIN_RESULT,
+	CMD_LOGINOUT,
+	CMD_LOGINOUT_RESULT,
+	CMD_ERROR
+};
 
 struct DataHeader {
 	short dataLength; // 数据长度
@@ -21,23 +27,43 @@ struct DataHeader {
 };
 
 // 登录以及其返回的结果
-struct Login {
+// 如果使用结构体来进行，不利于扩展，这里直接使用继承的方式
+struct Login : public DataHeader {
 	//int age;
 	//char name[32];
+	Login() {
+		dataLength = sizeof(Login);
+		cmd = CMD_LOGIN;
+	}
+	//DataHeader header;
 	char userName[32];
 	char passWord[32];
 };
 
-struct LoginResult {
+struct LoginResult : public DataHeader {
+	LoginResult() {
+		dataLength = sizeof(LoginResult);
+		cmd = CMD_LOGIN_RESULT;
+		result = 0;   // 为0表示一切正常
+	}
 	int result;   // 登录的结果
 };
 
 // 登出以及其返回的结果
-struct Loginout {
+struct Loginout : public DataHeader {
+	Loginout() {
+		dataLength = sizeof(Loginout);
+		cmd = CMD_LOGINOUT;
+	}
 	char userName[32];
 };
 
-struct LoginoutResult {
+struct LoginoutResult : public DataHeader {
+	LoginoutResult() {
+		dataLength = sizeof(LoginoutResult);
+		cmd = CMD_LOGINOUT_RESULT;
+		result = 0;
+	}
 	int result;   // 登录的结果
 };
 
@@ -91,29 +117,33 @@ int main() {
 		}
 		else if(0 == strcmp(cmdbuf,"login")) {
 			// 登录命令
-			Login login = { "username","password" };
-			DataHeader header = { sizeof(Login) ,CMD_LOGIN};
-			send(_sock, (const char *)&header, sizeof(DataHeader), 0);
+			Login login;
+			strcpy(login.userName, "username");
+			strcpy(login.passWord, "password");
+
+			//DataHeader header = { sizeof(Login) ,CMD_LOGIN};
+			//send(_sock, (const char *)&header, sizeof(DataHeader), 0);
 			send(_sock, (const char*)&login, sizeof(Login), 0);
 
 			// 接收服务器的消息
-			DataHeader retheader = {};
+			//DataHeader retheader = {};
 			LoginResult retlogin = {};
-			recv(_sock, (char*)&retheader, sizeof(DataHeader), 0);
+			//recv(_sock, (char*)&retheader, sizeof(DataHeader), 0);
 			recv(_sock, (char*)&retlogin, sizeof(LoginResult), 0);
 			printf("Loginresult = %d\n", retlogin.result);
 		}
 		else if (0 == strcmp(cmdbuf, "logout")) {
 			// 退出命令
-			Loginout loginout = { "username" };
-			DataHeader header = { sizeof(Loginout),CMD_LOGINOUT };
-			send(_sock, (const char*)&header, sizeof(DataHeader), 0);
+			Loginout loginout;
+			strcpy(loginout.userName, "username");
+			//DataHeader header = { sizeof(Loginout),CMD_LOGINOUT };
+			//send(_sock, (const char*)&header, sizeof(DataHeader), 0);
 			send(_sock, (const char*)&loginout, sizeof(Loginout), 0);
 
 			// 接收服务器的消息
-			DataHeader retheader = {};
+			//DataHeader retheader = {};
 			LoginoutResult retloginout = {};
-			recv(_sock, (char*)&retheader, sizeof(DataHeader), 0);
+			//recv(_sock, (char*)&retheader, sizeof(DataHeader), 0);
 			recv(_sock, (char*)&retloginout, sizeof(LoginoutResult), 0);
 			printf("Loginresult = %d\n", retloginout.result);
 		}
