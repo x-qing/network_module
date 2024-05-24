@@ -18,6 +18,7 @@ enum CMD {
 	CMD_LOGIN_RESULT,
 	CMD_LOGINOUT,
 	CMD_LOGINOUT_RESULT,
+	CMD_NEW_USER_JOIN,
 	CMD_ERROR
 };
 
@@ -67,6 +68,91 @@ struct LoginoutResult : public DataHeader {
 	int result;   // 登录的结果
 };
 
+// 新的客户端的加入
+struct NewUserJoin : public DataHeader {
+	NewUserJoin() {
+		dataLength = sizeof(NewUserJoin);
+		cmd = CMD_NEW_USER_JOIN;
+		sock = 0;
+	}
+	//int result;   // 登录的结果
+	int sock;
+};
+
+
+// 客户端同样使用一个函数来处理进程
+int processfd(SOCKET _cSock) {
+	// 定义一个缓冲来接收数据
+	char szRecv[1024] = {};
+	int len = recv(_cSock, szRecv, sizeof(DataHeader), 0);
+	DataHeader* header = (DataHeader*)szRecv;
+	//int len = recv(_cSock, (char *)&header, sizeof(DataHeader), 0);
+	if (len <= 0) {
+		printf("与服务器断开连接!\n");
+		return -1;
+	}
+	switch (header->cmd) {
+	case CMD_LOGIN_RESULT:
+	{
+		// 接收数据
+		recv(_cSock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
+		LoginResult* login = (LoginResult*)szRecv;
+		printf("收到服务返回:CMD_LOGIN_RESULT,数据长度 = %d,result = %d\n", login->dataLength,login->result);
+		//// 接收登录数据
+		////Login* login;
+		////recv(_cSock, (char*)&login + sizeof(DataHeader), sizeof(Login) - sizeof(DataHeader), 0);
+		//recv(_cSock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
+		//Login* login = (Login*)szRecv;
+		//printf("收到命令:CMD_LOGIN,数据长度 = %d,username=%s,password=%s\n", login->dataLength, login->userName, login->passWord);
+		//// 忽略判断用户名和密码
+		//// 定义消息头和返回值
+		////DataHeader hd = {CMD_LOGIN,};
+		//LoginResult res;
+
+		////send(_cSock, (const char*)&header, sizeof(DataHeader), 0);
+		//send(_cSock, (const char*)&res, sizeof(LoginResult), 0);
+	}
+	break;
+
+	case CMD_LOGINOUT_RESULT:
+	{
+		// 接收数据
+		recv(_cSock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
+		LoginoutResult* login = (LoginoutResult*)szRecv;
+		printf("收到服务返回:CMD_LOGINOUT_RESULT,数据长度 = %d,result = %d\n", login->dataLength, login->result);
+		////Loginout loginout;
+		//recv(_cSock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
+		//Loginout* loginout = (Loginout*)szRecv;
+		//printf("收到命令:CMD_LOGIN,数据长度 = %d,username=%s\n", loginout->dataLength, loginout->userName);
+		//// 忽略判断用户名和密码
+		//// 定义消息头和返回值
+		////DataHeader hd = {CMD_LOGIN,};
+		//LoginoutResult res;
+
+		////send(_cSock, (const char*)&header, sizeof(DataHeader), 0);
+		//send(_cSock, (const char*)&res, sizeof(LoginoutResult), 0);
+	}
+	break;
+	case CMD_NEW_USER_JOIN:
+	{
+		// 接收数据
+		recv(_cSock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
+		NewUserJoin* login = (NewUserJoin*)szRecv;
+		printf("收到服务返回:CMD_NEW_USER_JOIN,数据长度 = %d,sock = %d\n", login->dataLength, login->sock);
+	}
+	break;
+	//default:
+	//{
+	//	DataHeader header = { 0,CMD_ERROR };
+	//	//header.cmd = CMD_ERROR;
+	//	//header.dataLength = 0;
+	//	send(_cSock, (const char*)&header, sizeof(DataHeader), 0);
+	//}
+	//break;
+	//char msgBuf[128] = "???.";
+	//send(_cSock, msgBuf, strlen(msgBuf) + 1, 0);
+	}
+}
 
 // window下的socket环境
 int main() {
@@ -106,50 +192,74 @@ int main() {
 	// 都是128，长度匹配
 	
 	while (true) {
-		char cmdbuf[128] = { 0 };
-		scanf("%s", cmdbuf);
 
-		// 处理请求
-		if (0 == strcmp(cmdbuf, "exit")) {
-			//printf("client quit")
-			printf("client quit! task over!\n");
+		// 添加select网络模型
+		fd_set fd_read;
+		FD_ZERO(&fd_read);
+		FD_SET(_sock, &fd_read);
+		timeval time = { 0, 0 };
+		int ret = select(_sock, &fd_read, nullptr, nullptr, &time);
+		if (ret < 0) {
+			printf("select任务结束\n");
 			break;
 		}
-		else if(0 == strcmp(cmdbuf,"login")) {
-			// 登录命令
-			Login login;
-			strcpy(login.userName, "username");
-			strcpy(login.passWord, "password");
-
-			//DataHeader header = { sizeof(Login) ,CMD_LOGIN};
-			//send(_sock, (const char *)&header, sizeof(DataHeader), 0);
-			send(_sock, (const char*)&login, sizeof(Login), 0);
-
-			// 接收服务器的消息
-			//DataHeader retheader = {};
-			LoginResult retlogin = {};
-			//recv(_sock, (char*)&retheader, sizeof(DataHeader), 0);
-			recv(_sock, (char*)&retlogin, sizeof(LoginResult), 0);
-			printf("Loginresult = %d\n", retlogin.result);
+		if (FD_ISSET(_sock, &fd_read)) {
+			FD_CLR(_sock, &fd_read);
+			if (-1 == processfd(_sock)) { // 有数据可以读，需要进行处理
+				printf("select任务结束2\n");
+				break;
+			}
 		}
-		else if (0 == strcmp(cmdbuf, "logout")) {
-			// 退出命令
-			Loginout loginout;
-			strcpy(loginout.userName, "username");
-			//DataHeader header = { sizeof(Loginout),CMD_LOGINOUT };
-			//send(_sock, (const char*)&header, sizeof(DataHeader), 0);
-			send(_sock, (const char*)&loginout, sizeof(Loginout), 0);
+		printf("空闲时间处理其他业务！\n");
+		Login login;
+		strcpy(login.userName, "xiaoming");
+		strcpy(login.passWord, "123456");
+		send(_sock, (const char*)&login, sizeof(Login), 0);
+		//Sleep(1000);
+		//char cmdbuf[128] = { 0 };
+		//scanf("%s", cmdbuf);
 
-			// 接收服务器的消息
-			//DataHeader retheader = {};
-			LoginoutResult retloginout = {};
-			//recv(_sock, (char*)&retheader, sizeof(DataHeader), 0);
-			recv(_sock, (char*)&retloginout, sizeof(LoginoutResult), 0);
-			printf("Loginresult = %d\n", retloginout.result);
-		}
-		else {
-			printf("不支持此类命令，请重新输入\n");
-		}
+		// 处理请求
+		//if (0 == strcmp(cmdbuf, "exit")) {
+		//	//printf("client quit")
+		//	printf("client quit! task over!\n");
+		//	break;
+		//}
+		//else if(0 == strcmp(cmdbuf,"login")) {
+		//	// 登录命令
+		//	Login login;
+		//	strcpy(login.userName, "username");
+		//	strcpy(login.passWord, "password");
+
+		//	//DataHeader header = { sizeof(Login) ,CMD_LOGIN};
+		//	//send(_sock, (const char *)&header, sizeof(DataHeader), 0);
+		//	send(_sock, (const char*)&login, sizeof(Login), 0);
+
+		//	// 接收服务器的消息
+		//	//DataHeader retheader = {};
+		//	LoginResult retlogin = {};
+		//	//recv(_sock, (char*)&retheader, sizeof(DataHeader), 0);
+		//	recv(_sock, (char*)&retlogin, sizeof(LoginResult), 0);
+		//	printf("Loginresult = %d\n", retlogin.result);
+		//}
+		//else if (0 == strcmp(cmdbuf, "logout")) {
+		//	// 退出命令
+		//	Loginout loginout;
+		//	strcpy(loginout.userName, "username");
+		//	//DataHeader header = { sizeof(Loginout),CMD_LOGINOUT };
+		//	//send(_sock, (const char*)&header, sizeof(DataHeader), 0);
+		//	send(_sock, (const char*)&loginout, sizeof(Loginout), 0);
+
+		//	// 接收服务器的消息
+		//	//DataHeader retheader = {};
+		//	LoginoutResult retloginout = {};
+		//	//recv(_sock, (char*)&retheader, sizeof(DataHeader), 0);
+		//	recv(_sock, (char*)&retloginout, sizeof(LoginoutResult), 0);
+		//	printf("Loginresult = %d\n", retloginout.result);
+		//}
+		//else {
+		//	printf("不支持此类命令，请重新输入\n");
+		//}
 
 		//char recvbuf[128] = { 0 };
 

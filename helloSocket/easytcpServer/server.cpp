@@ -16,6 +16,7 @@ enum CMD{
 	CMD_LOGIN_RESULT,
 	CMD_LOGINOUT,
 	CMD_LOGINOUT_RESULT,
+	CMD_NEW_USER_JOIN,    // 同通知其他客户端，有新的客户端的加入
 	CMD_ERROR
 };
 
@@ -65,6 +66,17 @@ struct LoginoutResult : public DataHeader {
 	int result;   // 登录的结果
 };
 
+// 新的客户端的加入
+struct NewUserJoin : public DataHeader {
+	NewUserJoin() {
+		dataLength = sizeof(NewUserJoin);
+		cmd = CMD_NEW_USER_JOIN;
+		sock = 0;
+	}
+	//int result;   // 登录的结果
+	int sock;
+};
+
 std::vector<SOCKET> g_clients;
 
 // 使用一个函数来处理进程
@@ -86,7 +98,7 @@ int processfd(SOCKET _cSock) {
 		//recv(_cSock, (char*)&login + sizeof(DataHeader), sizeof(Login) - sizeof(DataHeader), 0);
 		recv(_cSock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
 		Login* login = (Login*)szRecv;
-		printf("收到命令:CMD_LOGIN,数据长度 = %d,username=%s,password=%s\n", login->dataLength, login->userName, login->passWord);
+		printf("收到命令来自（%d）:CMD_LOGIN,数据长度 = %d,username=%s,password=%s\n", _cSock,login->dataLength, login->userName, login->passWord);
 		// 忽略判断用户名和密码
 		// 定义消息头和返回值
 		//DataHeader hd = {CMD_LOGIN,};
@@ -102,7 +114,7 @@ int processfd(SOCKET _cSock) {
 		//Loginout loginout;
 		recv(_cSock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
 		Loginout* loginout = (Loginout*)szRecv;
-		printf("收到命令:CMD_LOGIN,数据长度 = %d,username=%s\n", loginout->dataLength, loginout->userName);
+		printf("收到命令来自（%d）:CMD_LOGIN,数据长度 = %d,username=%s\n",_cSock, loginout->dataLength, loginout->userName);
 		// 忽略判断用户名和密码
 		// 定义消息头和返回值
 		//DataHeader hd = {CMD_LOGIN,};
@@ -241,6 +253,11 @@ int main() {
 				printf("accept sucess!\n");
 			}
 			printf("new client add:ip = %s,port = %d\n", inet_ntoa(clientAddr.sin_addr), (int)clientAddr.sin_port);
+			for (size_t n = 0; n < g_clients.size(); n++) {
+				NewUserJoin userjoin = {};
+				userjoin.sock = _cSock;
+				send(g_clients[n], (const char*) & userjoin, sizeof(NewUserJoin), 0);
+			}
 			g_clients.push_back(_cSock);
 		}
 		//DataHeader header = {};
@@ -257,6 +274,7 @@ int main() {
 		//	printf("server quit! task over!\n");
 		//	break;
 		//}
+		// 这里fd_array的大小是64
 		for (size_t n = 0; n < fd_read.fd_count ; n++) {
 			if (-1 == processfd(fd_read.fd_array[n])) {
 				// 客户端退出
@@ -266,6 +284,9 @@ int main() {
 				}
 			}
 		}
+
+		// 处理其他业务
+		printf("空闲时间处理其他业务!\n");
 		//printf("recv data:cmd = %d, length = %d\n",header.cmd,header.dataLength);
 		//switch (header->cmd) {
 		//case CMD_LOGIN:
