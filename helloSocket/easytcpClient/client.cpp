@@ -5,6 +5,7 @@
 #include <Windows.h>
 #include <WinSock2.h>
 #include <stdio.h>
+#include <thread>
 //#pragma comment(lib,"ws2_32.lib")
 
 
@@ -154,6 +155,37 @@ int processfd(SOCKET _cSock) {
 	}
 }
 
+
+bool g_thread_exit = true;
+
+// 创建一个线程函数来获取输入命令
+void cmdThread(SOCKET sock) {
+	while (true) {
+		char cmdBuf[256] = {};
+		scanf("%s", cmdBuf);
+		if (0 == strcmp(cmdBuf, "exit")) {
+			printf("退出Thread线程！\n");  // 这样退出只是子线程退出了，主线程依旧还在运行
+			g_thread_exit = false;
+			return; 
+		}
+		else if (0 == strcmp(cmdBuf, "login")) {
+			Login login;
+			strcpy(login.userName, "xiaoming");
+			strcpy(login.passWord, "123456");
+			send(sock, (const char*)&login, sizeof(Login), 0);
+		}
+		else if (0 == strcmp(cmdBuf, "loginout")) {
+			Loginout loginout;
+			strcpy(loginout.userName, "xiaoming");
+			//strcpy(login.passWord, "123456");
+			send(sock, (const char*)&loginout, sizeof(Loginout), 0);
+		}
+		else {
+			printf("不支持的命令！\n");
+		}
+	}
+}
+
 // window下的socket环境
 int main() {
 	WORD ver = MAKEWORD(2, 2);
@@ -188,16 +220,20 @@ int main() {
 	else {
 		printf("connect sucess!\n");
 	}
+
+	// 启动线程的执行函数。
+	std::thread t1(cmdThread,_sock);
+	t1.detach();  // 不加这个可能导致，主线程比子线程先退出
 	
 	// 都是128，长度匹配
 	
-	while (true) {
+	while (g_thread_exit) {
 
 		// 添加select网络模型
 		fd_set fd_read;
 		FD_ZERO(&fd_read);
 		FD_SET(_sock, &fd_read);
-		timeval time = { 0, 0 };
+		timeval time = { 1, 0 };
 		int ret = select(_sock, &fd_read, nullptr, nullptr, &time);
 		if (ret < 0) {
 			printf("select任务结束\n");
@@ -210,11 +246,13 @@ int main() {
 				break;
 			}
 		}
-		printf("空闲时间处理其他业务！\n");
-		Login login;
-		strcpy(login.userName, "xiaoming");
-		strcpy(login.passWord, "123456");
-		send(_sock, (const char*)&login, sizeof(Login), 0);
+
+
+		//printf("空闲时间处理其他业务！\n");
+		//Login login;
+		//strcpy(login.userName, "xiaoming");
+		//strcpy(login.passWord, "123456");
+		//send(_sock, (const char*)&login, sizeof(Login), 0);
 		//Sleep(1000);
 		//char cmdbuf[128] = { 0 };
 		//scanf("%s", cmdbuf);

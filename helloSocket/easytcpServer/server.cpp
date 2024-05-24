@@ -229,7 +229,7 @@ int main() {
 		// 为nullptr --->表示设置为阻塞状态，一定要等到监视的文件描述符有变化才返回，
 		// 为0 --->表示非阻塞
 		// 为一个正数的时间 --->表示要等待这个时间再返回
-		timeval t = { 0,0 };
+		timeval t = { 1,0 };
 		// 非阻塞的情况，可以加一些其它业务处理，然后再查询。
 		int ret = select(_sock + 1, &fd_read, &fd_write, &fd_error, &t);
 		if (ret < 0) {
@@ -286,7 +286,7 @@ int main() {
 		}
 
 		// 处理其他业务
-		printf("空闲时间处理其他业务!\n");
+		//printf("空闲时间处理其他业务!\n");
 		//printf("recv data:cmd = %d, length = %d\n",header.cmd,header.dataLength);
 		//switch (header->cmd) {
 		//case CMD_LOGIN:
