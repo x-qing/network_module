@@ -1,7 +1,16 @@
 #define WIN32_LEAN_AND_MEAN   // 宏定义避免一些依赖库的引用冲突
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
+#ifdef _WIN32
 #include <Windows.h>
 #include <WinSock2.h>
+#else
+#include <arpa/inet.h>
+#include <unistd.h>
+#include<string.h>
+#define SOCKET int
+#define INVALID_SOCKET  (SOCKET)(~0)
+#define SOCKET_ERROR            (-1)
+#endif
 //#pragma comment(lib,"ws2_32.lib")
 #include <stdio.h>
 
@@ -11,7 +20,7 @@
 
 // 使用结构体,来进行消息的传递
 
-enum CMD{
+enum CMD {
 	CMD_LOGIN,
 	CMD_LOGIN_RESULT,
 	CMD_LOGINOUT,
@@ -98,7 +107,7 @@ int processfd(SOCKET _cSock) {
 		//recv(_cSock, (char*)&login + sizeof(DataHeader), sizeof(Login) - sizeof(DataHeader), 0);
 		recv(_cSock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
 		Login* login = (Login*)szRecv;
-		printf("收到命令来自（%d）:CMD_LOGIN,数据长度 = %d,username=%s,password=%s\n", _cSock,login->dataLength, login->userName, login->passWord);
+		printf("收到命令来自（%d）:CMD_LOGIN,数据长度 = %d,username=%s,password=%s\n", _cSock, login->dataLength, login->userName, login->passWord);
 		// 忽略判断用户名和密码
 		// 定义消息头和返回值
 		//DataHeader hd = {CMD_LOGIN,};
@@ -114,7 +123,7 @@ int processfd(SOCKET _cSock) {
 		//Loginout loginout;
 		recv(_cSock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
 		Loginout* loginout = (Loginout*)szRecv;
-		printf("收到命令来自（%d）:CMD_LOGIN,数据长度 = %d,username=%s\n",_cSock, loginout->dataLength, loginout->userName);
+		printf("收到命令来自（%d）:CMD_LOGIN,数据长度 = %d,username=%s\n", _cSock, loginout->dataLength, loginout->userName);
 		// 忽略判断用户名和密码
 		// 定义消息头和返回值
 		//DataHeader hd = {CMD_LOGIN,};
@@ -138,10 +147,12 @@ int processfd(SOCKET _cSock) {
 }
 
 int main() {
+#ifdef _WIN32
 	WORD ver = MAKEWORD(2, 2);
 	WSADATA dat;
 	// 启动windows的socket网络环境
 	WSAStartup(ver, &dat);
+#endif
 	/*
 	* socket简易tcp服务端
 	* socket -> bind -> listen -> accept -> read -> recv ->close
@@ -158,7 +169,11 @@ int main() {
 	sockaddr_in _sin = {};
 	_sin.sin_family = AF_INET;
 	_sin.sin_port = htons(4567);  // 主机到网络字节序的转换
-	_sin.sin_addr.S_un.S_addr = inet_addr("127.0.0.1");
+#ifdef WIN32
+	_sin.sin_addr.S_un.S_addr = inet_addr("172.29.140.202");
+#else
+	_sin.sin_addr.s_addr = inet_addr("192.168.179.144");
+#endif
 	//_sin.sin_addr.S_un.S_addr = INADDR_ANY;  // 表示支持本机上的所有ip
 	if (bind(_sock, (sockaddr*)&_sin, sizeof(sockaddr_in)) == SOCKET_ERROR) {
 		// 绑定错误
@@ -231,7 +246,16 @@ int main() {
 		// 为一个正数的时间 --->表示要等待这个时间再返回
 		timeval t = { 1,0 };
 		// 非阻塞的情况，可以加一些其它业务处理，然后再查询。
-		int ret = select(_sock + 1, &fd_read, &fd_write, &fd_error, &t);
+		// int ret = select(_sock + 1, &fd_read, &fd_write, &fd_error, &t);
+		int max_fd = _sock;
+		for (size_t n = 0; n < g_clients.size(); n++) {
+			if (g_clients[n] > max_fd) {
+				max_fd = g_clients[n];
+			}
+		}
+		// windows和linux对于select的第一个参数的处理有些不一样。windows对于select的第一个参数，不怎么关注，
+		// 而linux对于第一个参数表示的是监听文件描述符的一个范围。
+		int ret = select(max_fd + 1, &fd_read, nullptr, nullptr, &t);
 		if (ret < 0) {
 			printf("select任务结束!\n");
 			break;
@@ -243,6 +267,7 @@ int main() {
 
 			SOCKET _cSock = INVALID_SOCKET;   // 初始化为一个无效的socket
 			//char msgBuf[] = "hello client,i am server!\n";
+
 			_cSock = accept(_sock, (sockaddr*)&clientAddr, &naddrLen);
 
 			// 将新加入的客户端保存起来			
@@ -256,9 +281,10 @@ int main() {
 			for (size_t n = 0; n < g_clients.size(); n++) {
 				NewUserJoin userjoin = {};
 				userjoin.sock = _cSock;
-				send(g_clients[n], (const char*) & userjoin, sizeof(NewUserJoin), 0);
+				send(g_clients[n], (const char*)&userjoin, sizeof(NewUserJoin), 0);
 			}
 			g_clients.push_back(_cSock);
+			// printf("--------%zu--------------\n",g_clients.size());
 		}
 		//DataHeader header = {};
 
@@ -275,7 +301,8 @@ int main() {
 		//	break;
 		//}
 		// 这里fd_array的大小是64
-		for (size_t n = 0; n < fd_read.fd_count ; n++) {
+#ifdef _WIN32
+		for (size_t n = 0; n < fd_read.fd_count; n++) {
 			if (-1 == processfd(fd_read.fd_array[n])) {
 				// 客户端退出
 				auto iter = find(g_clients.begin(), g_clients.end(), fd_read.fd_array[n]);
@@ -284,6 +311,18 @@ int main() {
 				}
 			}
 		}
+#else
+		for (size_t n = 0; n < g_clients.size(); n++) {
+			if (FD_ISSET(g_clients[n], &fd_read)) {
+				if (processfd(g_clients[n]) == -1) {
+					// Client disconnected
+					close(g_clients[n]);
+					g_clients.erase(g_clients.begin() + n);
+					n--; // Adjust the index after erase
+				}
+			}
+		}
+#endif
 
 		// 处理其他业务
 		//printf("空闲时间处理其他业务!\n");
@@ -347,22 +386,27 @@ int main() {
 		//	char msgBuf[128] = "???.";
 		//	send(_cSock, msgBuf, strlen(msgBuf) + 1, 0);
 		//}
-		
-		
+
+
 		//char msgBuf[] = "hello client,i am server!\n";
 		//send(_cSock, msgBuf, strlen(msgBuf)+1,0);   // 把结尾符号0也发送过去
 	}
 
-	for (size_t n = 0;n < g_clients.size() - 1; n++) {
+	for (size_t n = 0; n < g_clients.size() - 1; n++) {
 		//FD_SET(g_clients[n], &fd_read);
+#ifdef _WIN32
 		closesocket(g_clients[n]);
+#else
+		close(g_clients[n]);
+#endif
 	}
 
+#ifdef _WIN32
 	closesocket(_sock);
-
-
 	WSACleanup();
-
+#else
+	close(_sock);
+#endif
 	printf("quit over!!!\n");
 	getchar();
 	return 0;

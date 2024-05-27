@@ -226,6 +226,7 @@ int main() {
 	_sin.sin_port = htons(4567);
 #ifdef _WIN32
 	_sin.sin_addr.S_un.S_addr = inet_addr("172.29.140.202");
+	//_sin.sin_addr.S_un.S_addr = inet_addr("192.168.179.144");
 #else
 	// _sin.sin_addr.S_un.S_addr = inet_addr("192.168.179.1");
 	_sin.sin_addr.s_addr = inet_addr("172.29.140.202");
@@ -251,7 +252,7 @@ int main() {
 		FD_ZERO(&fd_read);
 		FD_SET(_sock, &fd_read);
 		timeval time = { 1, 0 };
-		int ret = select(_sock, &fd_read, nullptr, nullptr, &time);
+		int ret = select(_sock+1, &fd_read, nullptr, nullptr, &time);
 		if (ret < 0) {
 			printf("selectÈÎÎñ½áÊø\n");
 			break;
