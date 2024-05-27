@@ -2,8 +2,18 @@
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 //#pragma warning(disable:4996）
 
+#ifdef _WIN32
 #include <Windows.h>
 #include <WinSock2.h>
+#else
+#include<unistd.h>
+#include<arpa/inet.h>
+#include<string.h>
+#define SOCKET int
+#define INVALID_SOCKET  (SOCKET)(~0)
+#define SOCKET_ERROR            (-1)
+#endif
+
 #include <stdio.h>
 #include <thread>
 //#pragma comment(lib,"ws2_32.lib")
@@ -98,7 +108,7 @@ int processfd(SOCKET _cSock) {
 		// 接收数据
 		recv(_cSock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
 		LoginResult* login = (LoginResult*)szRecv;
-		printf("收到服务返回:CMD_LOGIN_RESULT,数据长度 = %d,result = %d\n", login->dataLength,login->result);
+		printf("收到服务返回:CMD_LOGIN_RESULT,数据长度 = %d,result = %d\n", login->dataLength, login->result);
 		//// 接收登录数据
 		////Login* login;
 		////recv(_cSock, (char*)&login + sizeof(DataHeader), sizeof(Login) - sizeof(DataHeader), 0);
@@ -166,7 +176,7 @@ void cmdThread(SOCKET sock) {
 		if (0 == strcmp(cmdBuf, "exit")) {
 			printf("退出Thread线程！\n");  // 这样退出只是子线程退出了，主线程依旧还在运行
 			g_thread_exit = false;
-			return; 
+			return;
 		}
 		else if (0 == strcmp(cmdBuf, "login")) {
 			Login login;
@@ -188,10 +198,12 @@ void cmdThread(SOCKET sock) {
 
 // window下的socket环境
 int main() {
+#ifdef _WIN32
 	WORD ver = MAKEWORD(2, 2);
 	WSADATA dat;
 	// 启动windows的socket网络环境
 	WSAStartup(ver, &dat);
+#endif
 	/*
 	* socket简易tcp服务端
 	* socket -> bind -> listen -> accept -> read -> recv ->close
@@ -212,7 +224,12 @@ int main() {
 	_sin.sin_family = AF_INET;
 	// 服务器的ip和端口
 	_sin.sin_port = htons(4567);
-	_sin.sin_addr.S_un.S_addr = inet_addr("127.0.0.1");
+#ifdef _WIN32
+	_sin.sin_addr.S_un.S_addr = inet_addr("172.29.140.202");
+#else
+	// _sin.sin_addr.S_un.S_addr = inet_addr("192.168.179.1");
+	_sin.sin_addr.s_addr = inet_addr("172.29.140.202");
+#endif
 	int _csock = connect(_sock, (sockaddr*)&_sin, sizeof(sockaddr_in));
 	if (_csock == SOCKET_ERROR) {
 		printf("connect error!\n");
@@ -222,11 +239,11 @@ int main() {
 	}
 
 	// 启动线程的执行函数。
-	std::thread t1(cmdThread,_sock);
+	std::thread t1(cmdThread, _sock);
 	t1.detach();  // 不加这个可能导致，主线程比子线程先退出
-	
+
 	// 都是128，长度匹配
-	
+
 	while (g_thread_exit) {
 
 		// 添加select网络模型
@@ -310,11 +327,15 @@ int main() {
 		//	printf("recv data is: age=%d,name=%s\n", dp->age, dp->name);
 		//}
 	}
-	
 
+
+
+#ifdef _WIN32
 	closesocket(_sock);
-
 	WSACleanup();
+#else
+	close(_sock);
+#endif
 	printf("quit over!!!\n");
 	//getchar();
 	getchar();
