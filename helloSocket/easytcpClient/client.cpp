@@ -34,7 +34,8 @@ int main() {
 
 	EasyTcpClient client;
 	//client.initSocket();
-	client.connectServer("192.168.179.144", 4567);
+	// 	server.BindSocket("192.168.31.146", 4567);
+	client.connectServer("192.168.31.146", 4567);
 	std::thread t1(cmdThread, &client);
 	t1.detach();
 
@@ -43,7 +44,7 @@ int main() {
 	////client.initSocket();
 	//client2.connectServer("172.29.140.202", 4567);
 	//std::thread t2(cmdThread, &client2);
-	//t2.detach();
+	//t2.detach(); 
 
 	while (client.isRun()) {
 		client.onRun();

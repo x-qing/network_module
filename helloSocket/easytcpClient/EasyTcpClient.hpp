@@ -94,9 +94,7 @@ public:
 	}
 
 
-	// 接收数据
 
-	// 发送数据
 
 	// 处理网络消息
 	bool onRun() {
@@ -171,6 +169,8 @@ public:
 		}
 	}
 
+
+	// 发送数据
 	int SendData(DataHeader* header) {
 		if (isRun() && header) {
 			send(_sock, (const char*)header, header->dataLength, 0);
