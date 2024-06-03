@@ -18,7 +18,7 @@
 //#pragma comment(lib,"ws2_32.lib")
 #include <stdio.h>
 #include <vector>
-#include "MessageHeader.hpp"
+#include "messageheader.hpp"
 
 class EasyTcpServer {
 private:
@@ -36,12 +36,12 @@ public:
 	// 初始化socket
 	SOCKET InitSocket() {
 		// 启动Win sock 环境
-	#ifdef _WIN32
+#ifdef _WIN32
 		WORD ver = MAKEWORD(2, 2);
 		WSADATA dat;
 		// 启动windows的socket网络环境
 		WSAStartup(ver, &dat);
-	#endif
+#endif
 		if (_sock != INVALID_SOCKET) {
 			printf("<socket=%d>关闭旧连接！\n", _sock);
 			closeSocket();
@@ -58,7 +58,7 @@ public:
 
 		return _sock;
 	}
-	
+
 	// 绑定端口号
 	int BindSocket(const char* ip, unsigned short port) {
 		sockaddr_in _sin = {};
@@ -66,25 +66,25 @@ public:
 		_sin.sin_port = htons(port);  // 主机到网络字节序的转换
 
 		// 指定ip地址
-	#ifdef WIN32
-		//_sin.sin_addr.S_un.S_addr = inet_addr("172.29.140.202");
+#ifdef WIN32
+	//_sin.sin_addr.S_un.S_addr = inet_addr("172.29.140.202");
 		_sin.sin_addr.S_un.S_addr = inet_addr(ip);
-	#else
+#else
 		_sin.sin_addr.s_addr = inet_addr("192.168.179.144");
-	#endif
+#endif
 		//_sin.sin_addr.S_un.S_addr = INADDR_ANY;  // 表示支持本机上的所有ip
 		int ret = bind(_sock, (sockaddr*)&_sin, sizeof(sockaddr_in));
 		if (ret == SOCKET_ERROR) {
 			// 绑定错误
-			printf("错误，绑定端口<%d>失败...!\n",port);
+			printf("错误，绑定端口<%d>失败...!\n", port);
 			return 0;
 		}
 		else {
-			printf("绑定端口<%d>成功...!\n",port);
+			printf("绑定端口<%d>成功...!\n", port);
 		}
 		return ret;
 	}
-	
+
 	// 监听端口号
 	int ListrnSocket(int num) {
 		int ret = listen(_sock, num);
@@ -97,7 +97,7 @@ public:
 		}
 		return ret;
 	}
-	
+
 	// 接收客户端连接
 	SOCKET AcceptSocket() {
 		sockaddr_in clientAddr = {};
@@ -109,14 +109,14 @@ public:
 
 		_cSock = accept(_sock, (sockaddr*)&clientAddr, &naddrLen);
 #else
-		_cSock = accept(_sock, (sockaddr*)&clientAddr, (socklen_t *)&naddrLen);
+		_cSock = accept(_sock, (sockaddr*)&clientAddr, (socklen_t*)&naddrLen);
 #endif
 		// 将新加入的客户端保存起来			
 		if (_cSock == SOCKET_ERROR) {
-			printf("socket=<%d>错误，接收到无效客户端...!\n",_sock);
+			printf("socket=<%d>错误，接收到无效客户端...!\n", _sock);
 		}
 		else {
-			printf("socket=<%d>成功，新客户端加入:socket=%d,ip = %s,port = %d\n",_sock, _cSock, inet_ntoa(clientAddr.sin_addr), (int)clientAddr.sin_port);
+			printf("socket=<%d>成功，新客户端加入:socket=%d,ip = %s,port = %d\n", _sock, _cSock, inet_ntoa(clientAddr.sin_addr), (int)clientAddr.sin_port);
 			//for (size_t n = 0; n < g_clients.size(); n++) {
 			//	NewUserJoin userjoin = {};
 			//	userjoin.sock = _cSock;
@@ -134,19 +134,19 @@ public:
 		if (_sock != INVALID_SOCKET) {
 			for (size_t n = 0; n < g_clients.size() - 1; n++) {
 				//FD_SET(g_clients[n], &fd_read);
-			#ifdef _WIN32
+#ifdef _WIN32
 				closesocket(g_clients[n]);
-			#else
+#else
 				close(g_clients[n]);
-			#endif
+#endif
 			}
 
-		#ifdef _WIN32
+#ifdef _WIN32
 			closesocket(_sock);
 			WSACleanup();
-		#else
+#else
 			close(_sock);
-		#endif
+#endif
 		}
 	}
 
@@ -197,7 +197,7 @@ public:
 				// printf("--------%zu--------------\n",g_clients.size());
 			}
 
-		#ifdef _WIN32
+#ifdef _WIN32
 			for (size_t n = 0; n < fd_read.fd_count; n++) {
 				if (-1 == RecvData(fd_read.fd_array[n])) {
 					// 客户端退出
@@ -207,18 +207,26 @@ public:
 					}
 				}
 			}
-		#else
+#else
 			for (size_t n = 0; n < g_clients.size(); n++) {
 				if (FD_ISSET(g_clients[n], &fd_read)) {
-					if (processfd(g_clients[n]) == -1) {
-						// Client disconnected
-						close(g_clients[n]);
+					// if (processfd(g_clients[n]) == -1) {
+					// 	// Client disconnected
+					// 	close(g_clients[n]);
+					// 	g_clients.erase(g_clients.begin() + n);
+					// 	n--; // Adjust the index after erase
+					// }
+					if (-1 == RecvData(g_clients[n])) {
+						// auto iter = find(g_clients.begin(), g_clients.end(), fd_read.fd_array[n]);
+						// if (iter != g_clients.end()) {
+						//     g_clients.erase(iter);
+						// }
 						g_clients.erase(g_clients.begin() + n);
-						n--; // Adjust the index after erase
+						n--;
 					}
 				}
 			}
-		#endif
+#endif
 			return true;
 		}
 
@@ -245,7 +253,7 @@ public:
 	// 服务端需要与多个sock来建立连接，这里要传入一个socket参数
 
 	// 这里的DataHeader* header感觉有点问题
-	void OnNetMsg(SOCKET _cSock,DataHeader* header) {
+	void OnNetMsg(SOCKET _cSock, DataHeader* header) {
 
 		switch (header->cmd) {
 		case CMD_LOGIN:
@@ -276,7 +284,7 @@ public:
 	}
 
 	// 发送给指定socket的数据
-	int SendData(SOCKET _cSock,DataHeader* header) {
+	int SendData(SOCKET _cSock, DataHeader* header) {
 		if (isRun() && header) {
 			send(_cSock, (const char*)header, header->dataLength, 0);
 		}
@@ -287,7 +295,7 @@ public:
 	void SendDataToAll(DataHeader* header) {
 
 
-		if (isRun() && header) { 
+		if (isRun() && header) {
 			for (size_t n = 0; n < g_clients.size(); n++) {
 				SendData(g_clients[n], header);
 			}
