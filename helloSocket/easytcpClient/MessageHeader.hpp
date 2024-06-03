@@ -33,6 +33,7 @@ struct LoginResult : public DataHeader {
 		result = 0;   // 为0表示一切正常
 	}
 	int result;   // 登录的结果
+	char data[8192];
 };
 
 // 登出以及其返回的结果

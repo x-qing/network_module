@@ -236,7 +236,7 @@ public:
 	// 接收数据
 	int RecvData(SOCKET _cSock) {
 		// 定义一个缓冲来接收数据
-		char szRecv[1024] = {};
+		char szRecv[4096] = {};
 		int len = recv(_cSock, szRecv, sizeof(DataHeader), 0);
 		DataHeader* header = (DataHeader*)szRecv;
 		//int len = recv(_cSock, (char *)&header, sizeof(DataHeader), 0);
@@ -262,7 +262,8 @@ public:
 			Login* login = (Login*)header;
 			printf("收到命令来自（%d）:CMD_LOGIN,数据长度 = %d,username=%s,password=%s\n", _cSock, login->dataLength, login->userName, login->passWord);
 			LoginResult res;
-			send(_cSock, (const char*)&res, sizeof(LoginResult), 0);
+			//send(_cSock, (const char*)&res, sizeof(LoginResult), 0);
+			SendData(_cSock, &res);
 		}
 		break;
 
@@ -271,13 +272,15 @@ public:
 			Loginout* loginout = (Loginout*)header;
 			printf("收到命令来自（%d）:CMD_LOGIN,数据长度 = %d,username=%s\n", _cSock, loginout->dataLength, loginout->userName);
 			LoginoutResult res;
-			send(_cSock, (const char*)&res, sizeof(LoginoutResult), 0);
+			//send(_cSock, (const char*)&res, sizeof(LoginoutResult), 0);
+			SendData(_cSock, &res);
 		}
 		break;
 		default:
 		{
 			DataHeader header = { 0,CMD_ERROR };
-			send(_cSock, (const char*)&header, sizeof(DataHeader), 0);
+			//send(_cSock, (const char*)&header, sizeof(DataHeader), 0);
+			SendData(_cSock, &header);
 		}
 		break;
 		}

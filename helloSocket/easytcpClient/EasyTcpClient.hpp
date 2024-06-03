@@ -124,11 +124,17 @@ public:
 		return _sock != INVALID_SOCKET;
 	}
 
-	
+	// 第二缓冲区，也称之为双缓冲区
+	char szRecv[4096] = {};
 	// 接收数据，要处理粘包 拆分包
 	int RecvData(SOCKET _cSock) {
-		char szRecv[1024] = {};
-		int len = recv(_cSock, szRecv, sizeof(DataHeader), 0);
+
+		// 修改客户端，一次性接收4K的数据
+		
+		//int len = recv(_cSock, szRecv, sizeof(DataHeader), 0);
+		int len = recv(_cSock, szRecv, 4096, 0);
+		printf("nlen=%d\n", len);
+		/*
 		DataHeader* header = (DataHeader*)szRecv;
 		//int len = recv(_cSock, (char *)&header, sizeof(DataHeader), 0);
 		if (len <= 0) {
@@ -137,6 +143,7 @@ public:
 		}
 		recv(_cSock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
 		OnNetMsg(header);
+		*/
 		return 0;
 	}
 

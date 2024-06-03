@@ -33,25 +33,18 @@ void cmdThread(EasyTcpClient* client) {
 int main() {
 
 	EasyTcpClient client;
-	//client.initSocket();
-	// 	server.BindSocket("192.168.31.146", 4567);
-	client.connectServer("192.168.31.146", 4567);
+	client.connectServer("172.29.253.2", 4567);
 	std::thread t1(cmdThread, &client);
 	t1.detach();
-
-	// 再创建一个客户端
-	//EasyTcpClient client2;
-	////client.initSocket();
-	//client2.connectServer("172.29.140.202", 4567);
-	//std::thread t2(cmdThread, &client2);
-	//t2.detach(); 
-
+	Login login;
+	strcpy(login.userName, "lisi");
+	strcpy(login.passWord, "123456");
 	while (client.isRun()) {
 		client.onRun();
-		//client2.onRun();
+		client.SendData(&login);
+		 
 	}
 	client.closeSocket();
-	//client2.closeSocket();
 	printf("已退出！\n");
 	getchar();
 	return 0;
