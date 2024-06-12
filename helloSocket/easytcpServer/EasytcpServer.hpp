@@ -2,11 +2,13 @@
 
 #define _EasytcpServer_hpp_
 
-#define WIN32_LEAN_AND_MEAN   // 宏定义避免一些依赖库的引用冲突
-#define _WINSOCK_DEPRECATED_NO_WARNINGS
+
 #ifdef _WIN32
-#include <Windows.h>
-#include <WinSock2.h>
+	#define FD_SETSIZE      1024
+	#define WIN32_LEAN_AND_MEAN   // 宏定义避免一些依赖库的引用冲突
+	#define _WINSOCK_DEPRECATED_NO_WARNINGS
+	#include <Windows.h>
+	#include <WinSock2.h>
 #else
 #include <arpa/inet.h>
 #include <unistd.h>
@@ -18,7 +20,10 @@
 //#pragma comment(lib,"ws2_32.lib")
 #include <stdio.h>
 #include <vector>
-#include "messageheader.hpp"
+#include <thread>
+//#include "MessageHeader.hpp"
+#include "MessageHeader.hpp"
+#include "CellTimeStamp.hpp"
 
 #ifndef RECV_BUFF_SIZE
 #define RECV_BUFF_SIZE 10240
@@ -66,9 +71,14 @@ private:
 
 	// 使用指针，主要是为了保证在进行数据拷贝和扩容时方便，同时也能保证栈空间的崩溃
 	std::vector<ClientSocket*> g_clients;
+
+	CellTimeStamp _tTime;   // 计时
+	int _recvCount;         // 计数
+	
 public:
 	EasyTcpServer() {
 		_sock = INVALID_SOCKET;
+		_recvCount = 0;
 	}
 
 	~EasyTcpServer() {
@@ -158,14 +168,16 @@ public:
 			printf("socket=<%d>错误，接收到无效客户端...!\n", _sock);
 		}
 		else {
-			printf("socket=<%d>成功，新客户端加入:socket=%d,ip = %s,port = %d\n", _sock, cSock, inet_ntoa(clientAddr.sin_addr), (int)clientAddr.sin_port);
+			printf("socket=<%d>成功新客户端<%d>加入:socket=%d,ip = %s,port = %d\n", _sock, g_clients.size(), cSock, inet_ntoa(clientAddr.sin_addr), (int)clientAddr.sin_port);
 			//for (size_t n = 0; n < g_clients.size(); n++) {
 			//	NewUserJoin userjoin = {};
 			//	userjoin.sock = _cSock;
 			//	send(g_clients[n], (const char*)&userjoin, sizeof(NewUserJoin), 0);
 			//}
-			NewUserJoin userjoin = {};
-			SendDataToAll(&userjoin);
+
+			// 新客户端加入，同时其他客户端
+			//NewUserJoin userjoin = {};
+			//SendDataToAll(&userjoin);
 			
 			// 这里其实要判断new是否成功或者失败
 			g_clients.push_back(new ClientSocket(cSock));
@@ -177,7 +189,7 @@ public:
 	// 关闭socket
 	void closeSocket() {
 		if (_sock != INVALID_SOCKET) {
-			for (size_t n = 0; n < g_clients.size() - 1; n++) {
+			for (int n = 0; n < (int)g_clients.size() - 1; n++) {
 				//FD_SET(g_clients[n], &fd_read);
 #ifdef _WIN32
 				closesocket(g_clients[n]->getsockfd());
@@ -334,18 +346,25 @@ public:
 	// 响应网络消息
 	// 服务端需要与多个sock来建立连接，这里要传入一个socket参数
 
-	// 这里的DataHeader* header感觉有点问题
+	// 这里的DataHeader* header感觉有点问题???
 	void OnNetMsg(SOCKET cSock, DataHeader* header) {
+		_recvCount++;
+		auto t1 = _tTime.getElapsedSecond(); 
+		if (t1 >= 1.0) {
+			printf("time<%lf>,socket<%d>,clients<%d>,_recvCount<%d>\n", t1, _sock,g_clients.size(), _recvCount);
+			_recvCount = 0;
+			_tTime.update();
+		}
 
 		switch (header->cmd) {
 		case CMD_LOGIN:
 		{
 			// 接收登录数据
 			Login* login = (Login*)header;
-			printf("收到命令来自（%d）:CMD_LOGIN,数据长度 = %d,username=%s,password=%s\n", cSock, login->dataLength, login->userName, login->passWord);
-			LoginResult res;
+			//printf("收到命令来自（%d）:CMD_LOGIN,数据长度 = %d,username=%s,password=%s\n", cSock, login->dataLength, login->userName, login->passWord);
+			//LoginResult res;
 			//send(_cSock, (const char*)&res, sizeof(LoginResult), 0);
-			SendData(cSock, &res);
+			//SendData(cSock, &res);
 		}
 		break;
 
@@ -353,9 +372,9 @@ public:
 		{
 			Loginout* loginout = (Loginout*)header;
 			printf("收到命令来自（%d）:CMD_LOGIN,数据长度 = %d,username=%s\n", cSock, loginout->dataLength, loginout->userName);
-			LoginoutResult res;
+			//LoginoutResult res;
 			//send(_cSock, (const char*)&res, sizeof(LoginoutResult), 0);
-			SendData(cSock, &res);
+			//SendData(cSock, &res);
 		}
 		break;
 		default:
