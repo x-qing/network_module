@@ -1,3 +1,5 @@
+#pragma warning(disable:4996)
+
 #include "EasyTcpClient.hpp"
 
 //bool g_thread_exit = true;
@@ -33,7 +35,7 @@ void cmdThread(EasyTcpClient* client) {
 int main() {
 
 	EasyTcpClient client;
-	client.connectServer("172.29.253.2", 4567);
+	client.connectServer("172.20.10.6", 4567);
 	std::thread t1(cmdThread, &client);
 	t1.detach();
 	Login login;

@@ -8,6 +8,10 @@ enum CMD {
 };
 
 struct DataHeader {
+	DataHeader() {
+		dataLength = sizeof(DataHeader);
+		cmd = CMD_ERROR;
+	}
 	short dataLength; // 数据长度
 	short cmd; // 命令
 };
@@ -24,6 +28,7 @@ struct Login : public DataHeader {
 	//DataHeader header;
 	char userName[32];
 	char passWord[32];
+	char data[956];    // 1kb
 };
 
 struct LoginResult : public DataHeader {
@@ -33,7 +38,7 @@ struct LoginResult : public DataHeader {
 		result = 0;   // 为0表示一切正常
 	}
 	int result;   // 登录的结果
-	char data[8192];
+	char data[1016];
 };
 
 // 登出以及其返回的结果
