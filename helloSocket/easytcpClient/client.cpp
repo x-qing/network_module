@@ -33,14 +33,73 @@ void cmdThread() {
 	}
 }
 
+
+// 客户端数量
+const int cCount = 4000;
+const int tCount = 4;     // 线程的数量
+
+EasyTcpClient* client[cCount];
+
+
+//四个线程：id = 1,2,3,4
+void sendThread(int id) {
+	int c = (cCount / tCount);
+	int begin = (id - 1) * c;
+	int end = id * c;
+
+
+
+
+	// 1.创建1000个客户端
+	for (int i = begin; i < end; i++) {
+		client[i] = new EasyTcpClient();
+	}
+
+	// 2.连接服务器
+	for (int i = begin; i < end; i++) {
+		client[i]->connectServer("192.168.31.146", 4567);
+	}
+
+	Login login;
+	strcpy(login.userName, "lisi");
+	strcpy(login.passWord, "123456");
+
+	// 3.发送数据
+	while (g_bRun) {
+
+		for (int i = begin; i < end; i++) {
+			client[i]->SendData(&login);   // 只做数据的发送
+			//client[i]->onRun();    // 数据接收
+		}
+	}
+
+	// 5.关闭客户端
+	for (int i = begin; i < end; i++) {
+		client[i]->closeSocket();
+	}
+}
+
 int main() {
+	// 修改为多线程的情况
+
+	// 1.分离接收用户命令的线程
+	std::thread t1(cmdThread);
+	t1.detach();
 	
-	// 
+	// 2.分离发送数据的线程
+	for (int n = 0; n < tCount; n++) {
+		std::thread t1(sendThread, n + 1);
+		t1.detach();
+	}
+
+	printf("已退出！\n");
+	getchar();
+	return 0;
 
 
 
-
-	/*   ------------- 创建一个客户端--------------
+	// ------------- 创建一个客户端--------------
+	/*
 	// 两个线程，子线程用来处理命令行输入的数据
 	// 主线程用来接收客户端的返回消息
 	EasyTcpClient client;
@@ -61,8 +120,9 @@ int main() {
 	*/
 
 
-	/*  ------  创建一组客户端*/
-		// 两个线程，子线程用来处理命令行输入的数据
+	// -------------- 创建一组客户端----------------
+	/*  
+	// 两个线程，子线程用来处理命令行输入的数据
 	// 主线程用来接收客户端的返回消息
 	//const int CCOUNT = 10;
 	
@@ -113,5 +173,6 @@ int main() {
 	printf("已退出！\n");
 	//getchar();
 	return 0;
+	*/
 
 }
